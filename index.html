@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Fraud Detection</title>
+</head>
+<body>
+  <h2>Credit Card Fraud Detection</h2>
+
+  <input id="amount" placeholder="Enter any number" />
+  <button onclick="checkFraud()">Check</button>
+
+  <p id="result"></p>
+
+  <script>
+    async function checkFraud() {
+      const val = parseFloat(document.getElementById("amount").value) || 0;
+
+      // create dummy 30 features
+      let input = new Array(30).fill(0);
+      input[0] = val; // just for demo
+
+      const res = await fetch("https://creditfraud.onrender.com/predict/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ input: input })
+      });
+
+      const data = await res.json();
+
+      document.getElementById("result").innerText =
+        data.prediction === 1 ? "Fraud 🚨" : "Normal ✅";
+    }
+  </script>
+</body>
+</html>
