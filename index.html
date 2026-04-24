@@ -19,7 +19,7 @@
       let input = new Array(30).fill(0);
       input[0] = val; // just for demo
 
-      const res = await fetch("https://creditfraud.onrender.com/predict/", {
+      const res = await fetch("https://creditfraud.onrender.com/predict", {, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
