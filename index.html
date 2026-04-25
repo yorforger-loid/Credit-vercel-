@@ -6,32 +6,33 @@
 <body>
   <h2>Credit Card Fraud Detection</h2>
 
-  <input id="amount" placeholder="Enter any number" />
-  <button onclick="checkFraud()">Check</button>
+  <label>Test with:</label><br/>
+  <button onclick="checkFraud('normal')">Normal Sample</button>
+  <button onclick="checkFraud('fraud')">Fraud Sample</button>
 
   <p id="result"></p>
 
   <script>
-    async function checkFraud() {
-      const val = parseFloat(document.getElementById("amount").value) || 0;
+    // Paste actual rows from your dataset here
+    // normal_sample and fraud_sample = the 30 feature values (Time, V1..V28, Amount)
+    // Run this in your notebook to get them:
+    //   normal_sample = df[df['Class'] == 0].iloc[0].drop('Class').tolist()
+    //   fraud_sample  = df[df['Class'] == 1].iloc[0].drop('Class').tolist()
+    const SAMPLES = {
+      normal: [/* paste output of normal_sample here */],
+      fraud:  [/* paste output of fraud_sample here */]
+    };
 
-      // create dummy 30 features
-      let input = new Array(30).fill(0);
-      input[0] = val; // just for demo
-
-      // ✅ FIXED
-      const res = await fetch("https://creditfraud.onrender.com/predict", {
+    async function checkFraud(type) {
+      const res = await fetch("https://creditfraud.onrender.com/predict", {  // removed trailing slash
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ input: input })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input: SAMPLES[type] })
       });
 
       const data = await res.json();
-
       document.getElementById("result").innerText =
-        data.prediction === 1 ? "Fraud 🚨" : "Normal ✅";
+        data.prediction === 1 ? "🚨 Fraud Detected" : "✅ Normal Transaction";
     }
   </script>
 </body>
