@@ -1,39 +1,285 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Fraud Detection</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Fraud Shield</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0c10; --surface: #111520; --border: #1e2535;
+      --accent: #00e5ff; --danger: #ff3b5c; --safe: #00e676;
+      --text: #e8eaf6; --muted: #5c6480; --card: #141926;
+    }
+    body {
+      font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text);
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; padding: 2.5rem 1rem;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image: linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+      background-size: 48px 48px; pointer-events: none;
+    }
+    .wrapper { width: 100%; max-width: 580px; position: relative; z-index: 1; }
+
+    .header { text-align: center; margin-bottom: 2rem; animation: fadeDown 0.6s ease both; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(0,229,255,0.08); border: 1px solid rgba(0,229,255,0.2);
+      color: var(--accent); font-family: 'DM Mono', monospace;
+      font-size: 0.68rem; letter-spacing: 0.1em;
+      padding: 5px 14px; border-radius: 100px; margin-bottom: 0.8rem;
+    }
+    .badge::before { content: ''; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: pulse 2s infinite; }
+    h1 { font-size: clamp(1.8rem, 5vw, 2.4rem); font-weight: 800; letter-spacing: -0.03em; }
+    h1 span { color: var(--accent); }
+    .subtitle { color: var(--muted); font-size: 0.88rem; margin-top: 0.4rem; }
+
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 2rem; animation: fadeUp 0.6s ease 0.2s both; }
+    .section-label { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; margin-bottom: 1.2rem; }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-grid .full { grid-column: 1 / -1; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 0.72rem; font-weight: 600; color: var(--muted); letter-spacing: 0.05em; }
+    .field input, .field select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: 10px; padding: 0.7rem 0.9rem;
+      font-size: 0.9rem; font-family: 'DM Mono', monospace;
+      transition: border-color 0.2s; outline: none; width: 100%;
+    }
+    .field select option { background: var(--surface); }
+    .field input:focus, .field select:focus { border-color: var(--accent); }
+    .field input::placeholder { color: var(--muted); }
+    .field .hint { font-size: 0.67rem; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+    .gender-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .gender-btn {
+      padding: 0.65rem; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--muted); cursor: pointer;
+      font-family: 'Syne', sans-serif; font-size: 0.85rem; font-weight: 600;
+      transition: all 0.15s; text-align: center;
+    }
+    .gender-btn.active { border-color: var(--accent); background: rgba(0,229,255,0.08); color: var(--accent); }
+
+    .divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+
+    .submit-btn {
+      width: 100%; padding: 1rem; border-radius: 12px; border: none;
+      background: var(--accent); color: #0a0c10;
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1rem;
+      cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .submit-btn:hover:not(:disabled) { background: #33eaff; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,229,255,0.25); }
+    .submit-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .spinner { width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.3); border-top-color: #000; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
+    .submit-btn.loading .spinner { display: block; }
+
+    .result-box { margin-top: 1.5rem; border-radius: 16px; padding: 1.5rem; border: 1px solid; display: none; animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
+    .result-box.show { display: block; }
+    .result-box.normal { background: rgba(0,230,118,0.07); border-color: rgba(0,230,118,0.35); }
+    .result-box.fraud  { background: rgba(255,59,92,0.07);  border-color: rgba(255,59,92,0.35); }
+    .result-box.error  { background: rgba(255,200,0,0.07);  border-color: rgba(255,200,0,0.3); }
+    .result-top { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+    .result-icon { font-size: 2.2rem; }
+    .result-title { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.02em; }
+    .result-box.normal .result-title { color: var(--safe); }
+    .result-box.fraud  .result-title { color: var(--danger); }
+    .result-box.error  .result-title { color: #ffc400; }
+    .result-desc { font-size: 0.8rem; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 2px; }
+
+    .prob-section { display: none; }
+    .prob-section.show { display: block; }
+    .prob-label { display: flex; justify-content: space-between; font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--muted); margin-bottom: 6px; }
+    .prob-bar-bg { background: var(--surface); border-radius: 100px; height: 8px; overflow: hidden; }
+    .prob-bar-fill { height: 100%; border-radius: 100px; transition: width 1s cubic-bezier(0.4,0,0.2,1); width: 0%; }
+    .prob-bar-fill.low  { background: var(--safe); }
+    .prob-bar-fill.high { background: var(--danger); }
+
+    .footer { text-align: center; margin-top: 1.5rem; font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--muted); animation: fadeUp 0.6s ease 0.4s both; }
+
+    @keyframes fadeDown { from { opacity:0; transform:translateY(-14px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeUp   { from { opacity:0; transform:translateY(14px);  } to { opacity:1; transform:translateY(0); } }
+    @keyframes popIn    { from { opacity:0; transform:scale(0.94); } to { opacity:1; transform:scale(1); } }
+    @keyframes spin     { to { transform: rotate(360deg); } }
+    @keyframes pulse    { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+  </style>
 </head>
 <body>
-  <h2>Credit Card Fraud Detection</h2>
+<div class="wrapper">
+  <div class="header">
+    <div class="badge">AI · Real-time Detection</div>
+    <h1>Fraud <span>Shield</span></h1>
+    <p class="subtitle">Enter your transaction details — we'll tell you if it's safe</p>
+  </div>
 
-  <label>Test with:</label><br/>
-  <button onclick="checkFraud('normal')">Normal Sample</button>
-  <button onclick="checkFraud('fraud')">Fraud Sample</button>
+  <div class="card">
+    <p class="section-label">// Transaction Details</p>
+    <div class="form-grid">
 
-  <p id="result"></p>
+      <div class="field full">
+        <label>TRANSACTION AMOUNT ($)</label>
+        <input type="number" id="amt" placeholder="e.g. 149.99" min="0" step="0.01"/>
+      </div>
 
-  <script>
-    // Paste actual rows from your dataset here
-    // normal_sample and fraud_sample = the 30 feature values (Time, V1..V28, Amount)
-    // Run this in your notebook to get them:
-    //   normal_sample = df[df['Class'] == 0].iloc[0].drop('Class').tolist()
-    //   fraud_sample  = df[df['Class'] == 1].iloc[0].drop('Class').tolist()
-    const SAMPLES = {
-      normal: [/* paste output of normal_sample here */],
-      fraud:  [/* paste output of fraud_sample here */]
-    };
+      <div class="field full">
+        <label>TRANSACTION CATEGORY</label>
+        <select id="category">
+          <option value="">Select category...</option>
+          <option value="grocery_pos">🛒 Grocery (In-store)</option>
+          <option value="grocery_net">🛒 Grocery (Online)</option>
+          <option value="shopping_pos">🛍️ Shopping (In-store)</option>
+          <option value="shopping_net">🛍️ Shopping (Online)</option>
+          <option value="food_dining">🍔 Food & Dining</option>
+          <option value="gas_transport">⛽ Gas & Transport</option>
+          <option value="entertainment">🎬 Entertainment</option>
+          <option value="travel">✈️ Travel</option>
+          <option value="health_fitness">💊 Health & Fitness</option>
+          <option value="personal_care">💆 Personal Care</option>
+          <option value="home">🏠 Home</option>
+          <option value="kids_pets">🐾 Kids & Pets</option>
+          <option value="misc_pos">🏪 Misc (In-store)</option>
+          <option value="misc_net">💻 Misc (Online)</option>
+        </select>
+      </div>
 
-    async function checkFraud(type) {
-      const res = await fetch("https://creditfraud.onrender.com/predict", {  // removed trailing slash
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ input: SAMPLES[type] })
-      });
+      <div class="field">
+        <label>HOUR OF TRANSACTION (0–23)</label>
+        <input type="number" id="hour" placeholder="e.g. 14" min="0" max="23"/>
+        <span class="hint">2 = 2 AM &nbsp;·&nbsp; 14 = 2 PM</span>
+      </div>
 
-      const data = await res.json();
-      document.getElementById("result").innerText =
-        data.prediction === 1 ? "🚨 Fraud Detected" : "✅ Normal Transaction";
+      <div class="field">
+        <label>YOUR AGE</label>
+        <input type="number" id="age" placeholder="e.g. 32" min="18" max="100"/>
+      </div>
+
+      <div class="field">
+        <label>CITY POPULATION</label>
+        <input type="number" id="city_pop" placeholder="e.g. 50000" min="0"/>
+      </div>
+
+      <div class="field">
+        <label>DISTANCE TO MERCHANT (KM)</label>
+        <input type="number" id="distance" placeholder="e.g. 2.5" min="0" step="0.1"/>
+        <span class="hint">How far from your home?</span>
+      </div>
+
+      <div class="field full">
+        <label>GENDER</label>
+        <div class="gender-toggle">
+          <button class="gender-btn" id="btn-F" onclick="selectGender('F')">♀ &nbsp;Female</button>
+          <button class="gender-btn" id="btn-M" onclick="selectGender('M')">♂ &nbsp;Male</button>
+        </div>
+      </div>
+
+    </div>
+
+    <hr class="divider"/>
+
+    <button class="submit-btn" id="submitBtn" onclick="checkFraud()">
+      <div class="spinner"></div>
+      <span id="btnText">🔍 &nbsp;Check Transaction</span>
+    </button>
+
+    <div class="result-box" id="resultBox">
+      <div class="result-top">
+        <div class="result-icon" id="resultIcon"></div>
+        <div>
+          <div class="result-title" id="resultTitle"></div>
+          <div class="result-desc"  id="resultDesc"></div>
+        </div>
+      </div>
+      <div class="prob-section" id="probSection">
+        <div class="prob-label">
+          <span>Fraud Probability</span>
+          <span id="probValue">0%</span>
+        </div>
+        <div class="prob-bar-bg">
+          <div class="prob-bar-fill" id="probFill"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="footer">Model served via Render · UI on Vercel</p>
+</div>
+
+<script>
+  const API = 'https://creditfraud.onrender.com/predict';
+  let selectedGender = null;
+
+  function selectGender(g) {
+    selectedGender = g;
+    document.getElementById('btn-F').classList.toggle('active', g === 'F');
+    document.getElementById('btn-M').classList.toggle('active', g === 'M');
+  }
+
+  function showResult(type, icon, title, desc, prob = null) {
+    const box  = document.getElementById('resultBox');
+    const pSec = document.getElementById('probSection');
+    document.getElementById('resultIcon').textContent  = icon;
+    document.getElementById('resultTitle').textContent = title;
+    document.getElementById('resultDesc').textContent  = desc;
+    box.className = `result-box show ${type}`;
+    if (prob !== null && type !== 'error') {
+      pSec.className = 'prob-section show';
+      document.getElementById('probValue').textContent = prob + '%';
+      const fill = document.getElementById('probFill');
+      fill.className = `prob-bar-fill ${prob >= 50 ? 'high' : 'low'}`;
+      setTimeout(() => fill.style.width = prob + '%', 50);
+    } else {
+      pSec.className = 'prob-section';
     }
-  </script>
+  }
+
+  async function checkFraud() {
+    const amt      = parseFloat(document.getElementById('amt').value);
+    const category = document.getElementById('category').value;
+    const hour     = parseInt(document.getElementById('hour').value);
+    const age      = parseInt(document.getElementById('age').value);
+    const city_pop = parseInt(document.getElementById('city_pop').value);
+    const distance = parseFloat(document.getElementById('distance').value);
+
+    if (!amt || !category || isNaN(hour) || isNaN(age) || isNaN(city_pop) || isNaN(distance) || !selectedGender) {
+      showResult('error', '⚠️', 'Fill All Fields', 'Every field is needed to analyze the transaction');
+      return;
+    }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.classList.add('loading');
+    document.getElementById('btnText').textContent = 'Analyzing…';
+    document.getElementById('resultBox').className = 'result-box';
+
+    try {
+      const res = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amt, category, gender: selectedGender, city_pop, hour, age, distance })
+      });
+      if (!res.ok) throw new Error('Server error');
+      const data = await res.json();
+
+      if (data.prediction === 1) {
+        showResult('fraud', '🚨', 'Fraudulent Transaction!',
+          'This transaction shows suspicious patterns — do not proceed', data.fraud_probability);
+      } else {
+        showResult('normal', '✅', 'Transaction Looks Safe',
+          'No suspicious activity detected', data.fraud_probability);
+      }
+    } catch (err) {
+      showResult('error', '⚠️', 'Could Not Connect',
+        'API may be waking up — wait 30s and try again');
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove('loading');
+      document.getElementById('btnText').textContent = '🔍  Check Transaction';
+    }
+  }
+</script>
 </body>
 </html>
